@@ -19,23 +19,19 @@ services:
     volumes: [.:/app]
   postgres:
     image: postgres:17-alpine
-    environment:
-      POSTGRES_DB: geo_proxy
-      POSTGRES_USER: geo_proxy
-      POSTGRES_PASSWORD: geo_proxy
-    volumes: [postgres-data:/var/lib/postgresql/data, ./migrations:/docker-entrypoint-initdb.d:ro]
+    environment: { POSTGRES_DB: geo_proxy, POSTGRES_USER: geo_proxy, POSTGRES_PASSWORD: geo_proxy }
+    ports: ["5432:5432"]
+    volumes: [postgres-data:/var/lib/postgresql/data]
   redis:
     image: redis:7.4-alpine
     command: redis-server --appendonly yes
+    ports: ["6379:6379"]
     volumes: [redis-data:/data]
   vpn-de-01:
     image: qmcgaw/gluetun:latest
     cap_add: [NET_ADMIN]
     devices: [/dev/net/tun:/dev/net/tun]
-    environment:
-      VPN_SERVICE_PROVIDER: custom
-      VPN_TYPE: wireguard
-      SERVER_COUNTRIES: Germany
+    environment: { VPN_SERVICE_PROVIDER: custom, VPN_TYPE: wireguard, SERVER_COUNTRIES: Germany }
   proxy-de-01:
     image: 3proxy/3proxy:latest
     network_mode: service:vpn-de-01
@@ -45,11 +41,13 @@ services:
     image: prom/prometheus:v2.55.0
     ports: ["9090:9090"]
     volumes: [./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro]
+  loki:
+    image: grafana/loki:3.2.1
+    ports: ["3100:3100"]
+    command: -config.file=/etc/loki/local-config.yaml
   grafana:
     image: grafana/grafana:11.3.0
     ports: ["3000:3000"]
     volumes: [grafana-data:/var/lib/grafana, ./docker/grafana/provisioning:/etc/grafana/provisioning:ro]
-volumes:
-  postgres-data:
-  redis-data:
-  grafana-data:
+    depends_on: [prometheus, loki]
+volumes: { postgres-data: {}, redis-data: {}, grafana-data: {} }

@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata: { name: postgres-backup }
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pgdump
+              image: postgres:17-alpine
+              command: ["/bin/sh", "-lc", "pg_dump $DATABASE_URL | gzip > /backup/geo-proxy-$(date +%Y%m%d%H%M).sql.gz"]
+              envFrom: [{ secretRef: { name: geo-proxy-secrets } }]
+              volumeMounts: [{ name: backup, mountPath: /backup }]
+          volumes: [{ name: backup, persistentVolumeClaim: { claimName: postgres-backups } }]

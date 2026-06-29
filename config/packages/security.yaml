@@ -1,0 +1,22 @@
+security:
+  password_hashers:
+    GeoProxy\Entity\User: 'auto'
+  providers:
+    app_user_provider:
+      entity: { class: GeoProxy\Entity\User, property: email }
+  firewalls:
+    dev:
+      pattern: ^/(_(profiler|wdt)|css|images|js)/
+      security: false
+    main:
+      stateless: true
+      provider: app_user_provider
+      custom_authenticators:
+        - GeoProxy\Security\ApiKeyAuthenticator
+  access_control:
+    - { path: ^/healthz, roles: PUBLIC_ACCESS }
+    - { path: ^/metrics, roles: PUBLIC_ACCESS }
+    - { path: ^/auth/login, roles: PUBLIC_ACCESS }
+    - { path: ^/webhooks/stripe, roles: PUBLIC_ACCESS }
+    - { path: ^/v1/admin, roles: ROLE_ADMIN }
+    - { path: ^/v1, roles: ROLE_USER }

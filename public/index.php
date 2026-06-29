@@ -2,37 +2,23 @@
 
 declare(strict_types=1);
 
-use GeoProxy\Controller\ApiKeyController;
-use GeoProxy\Controller\CountryController;
-use GeoProxy\Controller\HealthController;
-use GeoProxy\Controller\UsageController;
-use GeoProxy\Service\ApiResponse;
+use GeoProxy\Kernel;
+use Symfony\Component\Dotenv\Dotenv;
+use Symfony\Component\ErrorHandler\Debug;
 use Symfony\Component\HttpFoundation\Request;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
+if (is_file(dirname(__DIR__) . '/.env')) {
+    new Dotenv()->bootEnv(dirname(__DIR__) . '/.env');
+}
+
+if (($_SERVER['APP_DEBUG'] ?? false) && class_exists(Debug::class)) {
+    Debug::enable();
+}
+
+$kernel = new Kernel($_SERVER['APP_ENV'] ?? 'dev', (bool) ($_SERVER['APP_DEBUG'] ?? true));
 $request = Request::createFromGlobals();
-$path = $request->getPathInfo();
-$method = $request->getMethod();
-
-$routes = [
-    ['GET', '/healthz', [HealthController::class, 'health']],
-    ['GET', '/v1/countries', [CountryController::class, 'list']],
-    ['GET', '/v1/usage', [UsageController::class, 'currentUser']],
-    ['POST', '/v1/api-keys', [ApiKeyController::class, 'create']],
-];
-
-foreach ($routes as [$routeMethod, $routePath, $handler]) {
-    if ($method === $routeMethod && $path === $routePath) {
-        $controller = new $handler[0]();
-        $controller->{$handler[1]}($request)->send();
-        return;
-    }
-}
-
-if ($method === 'DELETE' && preg_match('#^/v1/api-keys/[a-f0-9-]+$#', $path)) {
-    (new ApiKeyController())->delete($request)->send();
-    return;
-}
-
-ApiResponse::json(['error' => 'not_found'], 404)->send();
+$response = $kernel->handle($request);
+$response->send();
+$kernel->terminate($request, $response);

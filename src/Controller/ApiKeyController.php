@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace GeoProxy\Controller;
 
 use GeoProxy\Service\ApiResponse;
+use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
 final class ApiKeyController
 {
+    #[Route('/v1/api-keys', name: 'api_keys_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
         return ApiResponse::json([
@@ -20,6 +22,7 @@ final class ApiKeyController
         ], 201);
     }
 
+    #[Route('/v1/api-keys/{id}', name: 'api_keys_delete', requirements: ['id' => '[a-f0-9-]+'], methods: ['DELETE'])]
     public function delete(Request $request): JsonResponse
     {
         return ApiResponse::json(['deleted' => true]);
