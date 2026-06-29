@@ -6,6 +6,7 @@ namespace GeoProxy\Controller;
 
 use GeoProxy\Repository\FixtureRepository;
 use GeoProxy\Service\PlanCatalog;
+use GeoProxy\Service\UsageMonitor;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -33,6 +34,16 @@ final class WebController
     public function plans(): Response
     {
         return new Response($this->layout('Plans — GeoProxy', 'plans', $this->plansView(new PlanCatalog()->all())));
+    }
+
+    #[Route('/dashboard', name: 'app_dashboard_page', methods: ['GET'])]
+    public function dashboard(): Response
+    {
+        $fixtures = new FixtureRepository();
+        $user = $fixtures->userById('demo-user') ?? [];
+        $usage = new UsageMonitor($fixtures)->currentPeriod('demo-user');
+
+        return new Response($this->layout('User panel — GeoProxy', 'dashboard', $this->dashboardView($user, $usage, $fixtures->apiKeysFor('demo-user'))));
     }
 
     #[Route('/docs', name: 'app_docs_page', methods: ['GET'])]
@@ -99,9 +110,37 @@ final class WebController
                     {$plan}
                     <button class="button primary full" type="submit">{$button}</button>
                     {$switch}
-                </form>
+                </form><script>document.querySelector('.auth-card')?.addEventListener('submit',async(e)=>{e.preventDefault();const form=e.currentTarget;const res=await fetch(form.action,{method:'POST',body:new FormData(form)});if(res.ok){location.href='/dashboard';}else{alert('Invalid credentials');}});</script>
             </section>
             HTML;
+    }
+
+
+    /** @param array<string, mixed> $user @param array<string, mixed> $usage @param list<array<string, mixed>> $apiKeys */
+    private function dashboardView(array $user, array $usage, array $apiKeys): string
+    {
+        $requestLimit = $usage['limits']['requests'] ?? null;
+        $bandwidthLimit = $usage['limits']['bandwidth_bytes'] ?? null;
+        $totalBytes = (int) ($usage['total_bytes'] ?? 0);
+        $requestPercent = $usage['percent_used']['requests'] ?? null;
+        $bandwidthPercent = $usage['percent_used']['bandwidth'] ?? null;
+        $countryRows = implode('', array_map(static fn(string $country, int $requests): string => sprintf('<tr><td>%s</td><td>%s</td></tr>', htmlspecialchars($country, ENT_QUOTES), number_format($requests)), array_keys($usage['countries'] ?? []), $usage['countries'] ?? []));
+        $keyRows = implode('', array_map(static function (array $key): string {
+            $whitelist = implode('<br>', array_map(static fn(string $ip): string => '<code>' . htmlspecialchars($ip, ENT_QUOTES) . '</code>', $key['ip_whitelist'] ?? []));
+            $methods = implode(', ', $key['auth_methods'] ?? []);
+            return sprintf('<tr><td><strong>%s</strong><br><span class="muted">%s</span></td><td><code>%s••••</code></td><td>%s</td><td>%s</td><td><form method="post" action="/v1/api-keys/%s/rotate"><button class="button secondary" type="submit">Rotate token</button></form></td></tr>', htmlspecialchars((string) $key['name'], ENT_QUOTES), htmlspecialchars((string) $key['last_used_at'], ENT_QUOTES), htmlspecialchars((string) $key['prefix'], ENT_QUOTES), htmlspecialchars($methods, ENT_QUOTES), $whitelist, htmlspecialchars((string) $key['id'], ENT_QUOTES));
+        }, $apiKeys));
+
+        return '<section class="section page-head"><p class="eyebrow">User panel</p><h1>Welcome back, ' . htmlspecialchars((string) ($user['name'] ?? 'User'), ENT_QUOTES) . '.</h1><p class="lede small">Your signed-in workspace now shows live usage, token rotation actions, supported auth methods, and the IP allowlist that controls where proxy requests may originate.</p></section><section class="section stats"><article class="panel"><span>Requests this period</span><strong>' . number_format((int) $usage['requests']) . '</strong><p>' . ($requestLimit === null ? 'Unlimited' : number_format((int) $requestLimit) . ' limit') . ' · ' . ($requestPercent === null ? 'n/a' : $requestPercent . '% used') . '</p></article><article class="panel"><span>Bandwidth</span><strong>' . $this->formatBytes($totalBytes) . '</strong><p>' . ($bandwidthLimit === null ? 'Unlimited' : $this->formatBytes((int) $bandwidthLimit) . ' limit') . ' · ' . ($bandwidthPercent === null ? 'n/a' : $bandwidthPercent . '% used') . '</p></article><article class="panel"><span>Errors</span><strong>' . number_format((int) $usage['errors']) . '</strong><p>Average latency ' . htmlspecialchars((string) $usage['average_latency_ms'], ENT_QUOTES) . ' ms</p></article></section><section class="section feature-grid"><article class="panel"><h2>Proper auth ways</h2><p>Send tokens as <code>Authorization: Bearer gp_...</code> for service clients or <code>X-API-Key: gp_...</code> for proxy integrations. JWT login is kept for the browser panel.</p></article><article class="panel"><h2>Whitelist request origins</h2><p>Only listed IPs and CIDR ranges can use each token. Update the allowlist before moving workloads to a new NAT, CI runner, or office egress.</p><form method="post" action="/v1/api-keys/key-demo-primary/ip-whitelist"><input name="ip_whitelist" placeholder="198.51.100.24, 203.0.113.0/28"><button class="button primary" type="submit">Save whitelist</button></form></article></section><section class="section table-panel"><h2>Token rotation and IP allowlists</h2><table><thead><tr><th>Token</th><th>Prefix</th><th>Auth methods</th><th>Allowed source IPs</th><th>Actions</th></tr></thead><tbody>' . $keyRows . '</tbody></table></section><section class="section table-panel"><h2>Usage by country</h2><table><thead><tr><th>Country</th><th>Requests</th></tr></thead><tbody>' . $countryRows . '</tbody></table></section>';
+    }
+
+    private function formatBytes(int $bytes): string
+    {
+        if ($bytes >= 1073741824) {
+            return round($bytes / 1073741824, 2) . ' GB';
+        }
+
+        return round($bytes / 1048576, 2) . ' MB';
     }
 
     /** @param list<array<string, mixed>> $plans */
@@ -151,6 +190,7 @@ final class WebController
             'login' => ['/login', 'Login'],
             'register' => ['/register', 'Register'],
             'plans' => ['/plans', 'Plans'],
+            'dashboard' => ['/dashboard', 'User panel'],
             'docs' => ['/docs', 'Documentation'],
         ];
         $links = '';

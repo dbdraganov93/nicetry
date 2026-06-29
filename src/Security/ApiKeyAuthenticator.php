@@ -41,6 +41,11 @@ final class ApiKeyAuthenticator extends AbstractAuthenticator
                 throw new AuthenticationException('Invalid API key.');
             }
 
+            $clientIp = $request->getClientIp() ?? '';
+            if (!$record->isIpAllowed($clientIp)) {
+                throw new AuthenticationException('Source IP is not allowed for this API key.');
+            }
+
             return $record->getUser();
         }));
     }

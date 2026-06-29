@@ -38,6 +38,25 @@ final class FixtureRepository
         return $this->data['users'];
     }
 
+
+    /** @return list<array<string, mixed>> */
+    public function apiKeysFor(string $userId): array
+    {
+        return $this->data['api_keys'][$userId] ?? [];
+    }
+
+    /** @return array<string, mixed>|null */
+    public function userById(string $userId): ?array
+    {
+        foreach ($this->users() as $user) {
+            if ((string) $user['id'] === $userId) {
+                return $user;
+            }
+        }
+
+        return null;
+    }
+
     /** @return array<string, mixed>|null */
     public function userByEmail(string $email): ?array
     {

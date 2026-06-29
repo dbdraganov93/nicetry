@@ -32,5 +32,15 @@ return [
     ],
     'usage' => [
         'demo-user' => ['plan' => 'starter', 'period' => '2026-06', 'requests' => 18420, 'bytes_in' => 2147483648, 'bytes_out' => 9126805504, 'connection_seconds' => 38540, 'countries' => ['DE' => 10200, 'FR' => 4300, 'NL' => 3920], 'errors' => 37, 'average_latency_ms' => 58],
+        'maya-user' => ['plan' => 'pro', 'period' => '2026-06', 'requests' => 482100, 'bytes_in' => 8589934592, 'bytes_out' => 55834574848, 'connection_seconds' => 91820, 'countries' => ['US' => 211000, 'DE' => 120500, 'FR' => 80600, 'NL' => 70000], 'errors' => 91, 'average_latency_ms' => 64],
+    ],
+    'api_keys' => [
+        'demo-user' => [
+            ['id' => 'key-demo-primary', 'name' => 'Production traffic', 'prefix' => 'gp_9f3a21c8', 'created_at' => '2026-05-14T09:20:00+00:00', 'last_used_at' => '2026-06-29T08:48:00+00:00', 'auth_methods' => ['Authorization: Bearer', 'X-API-Key'], 'ip_whitelist' => ['198.51.100.24', '203.0.113.0/28']],
+            ['id' => 'key-demo-ci', 'name' => 'CI smoke tests', 'prefix' => 'gp_2bc41e90', 'created_at' => '2026-06-01T15:10:00+00:00', 'last_used_at' => '2026-06-28T22:13:00+00:00', 'auth_methods' => ['X-API-Key'], 'ip_whitelist' => ['192.0.2.44']],
+        ],
+        'maya-user' => [
+            ['id' => 'key-maya-primary', 'name' => 'Scraping workers', 'prefix' => 'gp_b719e2aa', 'created_at' => '2026-04-03T12:00:00+00:00', 'last_used_at' => '2026-06-29T10:05:00+00:00', 'auth_methods' => ['Authorization: Bearer'], 'ip_whitelist' => ['198.51.100.42']],
+        ],
     ],
 ];

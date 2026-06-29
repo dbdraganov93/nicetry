@@ -37,6 +37,10 @@ class ApiKey
     #[ORM\Column(type: 'datetime_immutable', nullable: true)]
     private ?DateTimeImmutable $revokedAt;
 
+    /** @var list<string> */
+    #[ORM\Column(type: 'json')]
+    private array $ipWhitelist = [];
+
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(nullable: false)]
     private User $user;
@@ -98,6 +102,58 @@ class ApiKey
         $this->revokedAt = $revokedAt;
         $this->touch();
         return $this;
+    }
+    /** @return list<string> */
+    public function getIpWhitelist(): array
+    {
+        return $this->ipWhitelist;
+    }
+    /** @param list<string> $ipWhitelist */
+    public function setIpWhitelist(array $ipWhitelist): self
+    {
+        $this->ipWhitelist = array_values($ipWhitelist);
+        $this->touch();
+        return $this;
+    }
+    public function isIpAllowed(string $ip): bool
+    {
+        if ($this->ipWhitelist === []) {
+            return true;
+        }
+
+        foreach ($this->ipWhitelist as $allowed) {
+            if ($allowed === $ip || $this->cidrContains($allowed, $ip)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    private function cidrContains(string $cidr, string $ip): bool
+    {
+        [$range, $prefix] = array_pad(explode('/', $cidr, 2), 2, null);
+        if ($prefix === null || !ctype_digit($prefix)) {
+            return false;
+        }
+
+        $rangePacked = inet_pton($range);
+        $ipPacked = inet_pton($ip);
+        if ($rangePacked === false || $ipPacked === false || strlen($rangePacked) !== strlen($ipPacked)) {
+            return false;
+        }
+
+        $bits = (int) $prefix;
+        $bytes = intdiv($bits, 8);
+        $remainder = $bits % 8;
+        if ($bytes > 0 && substr($rangePacked, 0, $bytes) !== substr($ipPacked, 0, $bytes)) {
+            return false;
+        }
+        if ($remainder === 0) {
+            return true;
+        }
+
+        $mask = (0xff << (8 - $remainder)) & 0xff;
+        return (ord($rangePacked[$bytes]) & $mask) === (ord($ipPacked[$bytes]) & $mask);
     }
     public function getUser(): User
     {
