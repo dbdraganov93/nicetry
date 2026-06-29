@@ -1,0 +1,20 @@
+security:
+  password_hashers:
+    GeoProxy\Entity\User: 'auto'
+  providers:
+    app_user_provider:
+      entity: { class: GeoProxy\Entity\User, property: email }
+  firewalls:
+    login:
+      pattern: ^/auth/login
+      stateless: true
+      json_login: { check_path: /auth/login, username_path: email, password_path: password, success_handler: lexik_jwt_authentication.handler.authentication_success, failure_handler: lexik_jwt_authentication.handler.authentication_failure }
+    api:
+      pattern: ^/v1
+      stateless: true
+      custom_authenticators: [GeoProxy\Security\ApiKeyAuthenticator]
+      jwt: ~
+  access_control:
+    - { path: ^/auth/login, roles: PUBLIC_ACCESS }
+    - { path: ^/v1/admin, roles: ROLE_ADMIN }
+    - { path: ^/v1, roles: ROLE_USER }

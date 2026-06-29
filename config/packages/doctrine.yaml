@@ -1,0 +1,14 @@
+doctrine:
+  dbal:
+    url: '%env(resolve:DATABASE_URL)%'
+    types:
+      uuid: Symfony\Bridge\Doctrine\Types\UuidType
+  orm:
+    auto_generate_proxy_classes: true
+    enable_lazy_ghost_objects: true
+    auto_mapping: true
+    mappings:
+      GeoProxy:
+        type: attribute
+        dir: '%kernel.project_dir%/src/Entity'
+        prefix: 'GeoProxy\Entity'

@@ -14,4 +14,8 @@ final class HealthController
     {
         return ApiResponse::json(['status' => 'ok', 'service' => 'geo-proxy-gateway']);
     }
+    public function metrics(\Symfony\Component\HttpFoundation\Request $request): \Symfony\Component\HttpFoundation\Response
+    {
+        return new \Symfony\Component\HttpFoundation\Response("geo_proxy_up 1\n", 200, ["Content-Type" => "text/plain"]);
+    }
 }
