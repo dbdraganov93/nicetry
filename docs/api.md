@@ -56,6 +56,148 @@ Validation and authentication errors use compact machine-readable codes:
 
 Clients should branch on `error` rather than localized copy.
 
+## Client examples
+
+The examples below show the same read-only management request in several languages. Set `GEOPROXY_API_KEY` to a management API key created with `POST /v1/api-keys`, and change `GEOPROXY_BASE_URL` when calling a deployed environment instead of the local API.
+
+### cURL
+
+```bash
+export GEOPROXY_BASE_URL="http://localhost:8080"
+export GEOPROXY_API_KEY="gp_live_your_secret_key"
+
+curl -s "$GEOPROXY_BASE_URL/v1/countries" \
+  -H "Authorization: Bearer $GEOPROXY_API_KEY" \
+  -H 'Accept: application/json'
+```
+
+### JavaScript / Node.js
+
+```javascript
+const baseUrl = process.env.GEOPROXY_BASE_URL ?? 'http://localhost:8080';
+const apiKey = process.env.GEOPROXY_API_KEY;
+
+const response = await fetch(`${baseUrl}/v1/countries`, {
+  headers: {
+    Authorization: `Bearer ${apiKey}`,
+    Accept: 'application/json',
+  },
+});
+
+if (!response.ok) {
+  throw new Error(`GeoProxy API returned ${response.status}`);
+}
+
+const countries = await response.json();
+console.log(countries);
+```
+
+### Python
+
+```python
+import os
+import requests
+
+base_url = os.getenv("GEOPROXY_BASE_URL", "http://localhost:8080")
+api_key = os.environ["GEOPROXY_API_KEY"]
+
+response = requests.get(
+    f"{base_url}/v1/countries",
+    headers={
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/json",
+    },
+    timeout=10,
+)
+response.raise_for_status()
+
+print(response.json())
+```
+
+### PHP
+
+```php
+<?php
+
+$baseUrl = getenv('GEOPROXY_BASE_URL') ?: 'http://localhost:8080';
+$apiKey = getenv('GEOPROXY_API_KEY');
+
+$ch = curl_init($baseUrl . '/v1/countries');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => [
+        'Authorization: Bearer ' . $apiKey,
+        'Accept: application/json',
+    ],
+]);
+
+$body = curl_exec($ch);
+$status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+curl_close($ch);
+
+if ($status < 200 || $status >= 300) {
+    throw new RuntimeException('GeoProxy API returned HTTP ' . $status);
+}
+
+print_r(json_decode($body, true, flags: JSON_THROW_ON_ERROR));
+```
+
+### Go
+
+```go
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+    "net/http"
+    "os"
+    "time"
+)
+
+func main() {
+    baseURL := os.Getenv("GEOPROXY_BASE_URL")
+    if baseURL == "" {
+        baseURL = "http://localhost:8080"
+    }
+
+    req, err := http.NewRequest(http.MethodGet, baseURL+"/v1/countries", nil)
+    if err != nil {
+        panic(err)
+    }
+    req.Header.Set("Authorization", "Bearer "+os.Getenv("GEOPROXY_API_KEY"))
+    req.Header.Set("Accept", "application/json")
+
+    client := &http.Client{Timeout: 10 * time.Second}
+    res, err := client.Do(req)
+    if err != nil {
+        panic(err)
+    }
+    defer res.Body.Close()
+
+    if res.StatusCode < 200 || res.StatusCode >= 300 {
+        panic(fmt.Sprintf("GeoProxy API returned HTTP %d", res.StatusCode))
+    }
+
+    var countries []map[string]any
+    if err := json.NewDecoder(res.Body).Decode(&countries); err != nil {
+        panic(err)
+    }
+
+    fmt.Printf("%+v\n", countries)
+}
+```
+
+### Proxy traffic example
+
+After creating proxy credentials, configure an HTTP client to use the proxy endpoint and basic-auth username/password. The username controls geography; for example, `de.customer123` routes through Germany.
+
+```bash
+curl -x "http://de.customer123:generated-proxy-password@proxy.local:3128" \
+  https://ifconfig.me
+```
+
+
 ## Endpoints
 
 ### `POST /auth/register`

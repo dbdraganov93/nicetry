@@ -129,7 +129,6 @@ final class WebController
             'login' => ['/login', 'Login'],
             'register' => ['/register', 'Register'],
             'plans' => ['/plans', 'Plans'],
-            'admin' => ['/admin', 'Admin'],
         ];
         $links = '';
         foreach ($nav as $key => [$href, $label]) {
