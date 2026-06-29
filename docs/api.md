@@ -8,6 +8,9 @@ GeoProxy exposes JSON management APIs for authentication, plan discovery, accoun
 | --- | --- |
 | Local API | `http://localhost:8080` |
 | Kubernetes ingress | Configure from the host attached to `k8s/api-deployment.yaml` |
+| Sandbox | `http://localhost:8080` with seeded demo records (`key-demo-primary`, demo users, sample countries, and documentation IP ranges) |
+
+Sandbox responses use deterministic fixture records where possible and generated placeholder secrets for create/rotate actions. Do not use sandbox keys or example proxy passwords in production.
 
 All JSON endpoints return `Content-Type: application/json` unless otherwise noted.
 
@@ -25,13 +28,29 @@ curl -s http://localhost:8080/auth/login \
 
 ### Management API key
 
-Management endpoints are designed to accept an API key header:
+Management endpoints are designed to accept either API-key header style:
 
 ```http
 Authorization: Bearer gp_live_your_secret_key
+X-API-Key: gp_live_your_secret_key
 ```
 
-Create keys with `POST /v1/api-keys`. Store the returned `secret` immediately because it is intended to be shown once.
+Create keys with `POST /v1/api-keys`. Store the returned `secret` immediately because it is intended to be shown once. Local dashboard demo forms for `key-demo-*` records are public so the seeded UI can demonstrate rotation and IP allowlist updates without exposing a real secret; all non-demo `/v1` endpoints require authentication.
+
+## Available countries
+
+The sandbox fixture currently exposes the following geo-routing countries and cities. Use the two-letter code in management APIs and in proxy usernames.
+
+| Country | Code | Sandbox cities | Example proxy username prefix |
+| --- | --- | --- | --- |
+| Germany | `DE` | Berlin, Hamburg | `de.customer123` |
+| France | `FR` | Paris, Marseille | `fr.customer123` |
+| Netherlands | `NL` | Amsterdam | `nl.customer123` |
+| United States | `US` | New York, Los Angeles | `us.customer123` |
+| Italy | `IT` | Milan, Rome | `it.customer123` |
+| Spain | `ES` | Madrid, Barcelona | `es.customer123` |
+
+Plan access differs by tier: Free is limited to Germany, Starter includes DE/FR/NL/US, and Pro/Enterprise include every country above.
 
 ### Proxy credentials
 
@@ -142,49 +161,35 @@ if ($status < 200 || $status >= 300) {
 print_r(json_decode($body, true, flags: JSON_THROW_ON_ERROR));
 ```
 
-### Go
+### Java
 
-```go
-package main
+```java
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
-import (
-    "encoding/json"
-    "fmt"
-    "net/http"
-    "os"
-    "time"
-)
+public class GeoProxyCountries {
+    public static void main(String[] args) throws Exception {
+        String baseUrl = System.getenv().getOrDefault("GEOPROXY_BASE_URL", "http://localhost:8080");
+        String apiKey = System.getenv("GEOPROXY_API_KEY");
 
-func main() {
-    baseURL := os.Getenv("GEOPROXY_BASE_URL")
-    if baseURL == "" {
-        baseURL = "http://localhost:8080"
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(baseUrl + "/v1/countries"))
+            .header("Authorization", "Bearer " + apiKey)
+            .header("Accept", "application/json")
+            .GET()
+            .build();
+
+        HttpResponse<String> response = HttpClient.newHttpClient()
+            .send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IllegalStateException("GeoProxy API returned HTTP " + response.statusCode());
+        }
+
+        System.out.println(response.body());
     }
-
-    req, err := http.NewRequest(http.MethodGet, baseURL+"/v1/countries", nil)
-    if err != nil {
-        panic(err)
-    }
-    req.Header.Set("Authorization", "Bearer "+os.Getenv("GEOPROXY_API_KEY"))
-    req.Header.Set("Accept", "application/json")
-
-    client := &http.Client{Timeout: 10 * time.Second}
-    res, err := client.Do(req)
-    if err != nil {
-        panic(err)
-    }
-    defer res.Body.Close()
-
-    if res.StatusCode < 200 || res.StatusCode >= 300 {
-        panic(fmt.Sprintf("GeoProxy API returned HTTP %d", res.StatusCode))
-    }
-
-    var countries []map[string]any
-    if err := json.NewDecoder(res.Body).Decode(&countries); err != nil {
-        panic(err)
-    }
-
-    fmt.Printf("%+v\n", countries)
 }
 ```
 
@@ -543,6 +548,35 @@ curl -s -X POST http://localhost:8080/v1/api-keys \
   "prefix": "gp_ab12cd34",
   "secret": "gp_live_generated_secret",
   "created_at": "2026-06-29T12:00:00+00:00"
+}
+```
+
+### `POST /v1/api-keys/{id}/rotate`
+
+Rotates an API key and revokes the previous token. Use an authenticated request for production keys. The local sandbox also permits seeded `key-demo-*` IDs so dashboard buttons work without a real secret.
+
+```bash
+curl -s -X POST http://localhost:8080/v1/api-keys/key-demo-primary/rotate \
+  -H 'Accept: application/json'
+```
+
+**Authenticated production form**
+
+```bash
+curl -s -X POST http://localhost:8080/v1/api-keys/7f1d4d6b0d7f4e5ab8d7f4e5ab8d7f4e/rotate \
+  -H 'Authorization: Bearer gp_live_your_secret_key' \
+  -H 'Accept: application/json'
+```
+
+**Response `200`**
+
+```json
+{
+  "id": "key-demo-primary",
+  "prefix": "gp_ab12cd34",
+  "secret": "gp_live_generated_secret",
+  "rotated_at": "2026-06-29T12:00:00+00:00",
+  "previous_token_status": "revoked"
 }
 ```
 

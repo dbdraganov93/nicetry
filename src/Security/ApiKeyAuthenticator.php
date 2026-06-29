@@ -31,7 +31,7 @@ final class ApiKeyAuthenticator extends AbstractAuthenticator
             throw new AuthenticationException('Missing API key.');
         }
 
-        return new SelfValidatingPassport(new UserBadge($apiKey, function (string $plainKey) {
+        return new SelfValidatingPassport(new UserBadge($apiKey, function (string $plainKey) use ($request) {
             if ($this->apiKeys === null) {
                 throw new AuthenticationException('API key repository is not configured.');
             }

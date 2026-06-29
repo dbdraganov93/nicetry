@@ -164,12 +164,12 @@ final class WebController
             <section class="section page-head">
                 <p class="eyebrow">Documentation</p>
                 <h1>Build with the GeoProxy API.</h1>
-                <p class="lede small">Find endpoint references, architecture notes, deployment guidance, testing instructions, monitoring runbooks, and recovery procedures from one dedicated documentation page.</p>
+                <p class="lede small">Find endpoint references, sandbox setup, complete country coverage, and ready-to-copy examples for cURL, PHP, Python, JavaScript, and Java from one dedicated documentation page.</p>
             </section>
             <section class="section feature-grid">
-                <article class="panel"><h2>API reference</h2><p>Review authentication, country, plan, usage, key, proxy credential, node, billing, and admin endpoints.</p><a class="button secondary" href="/v1/plans">Explore plans API</a></article>
-                <article class="panel"><h2>Operations guides</h2><p>Use deployment, monitoring, database, and disaster recovery docs to run GeoProxy reliably in production.</p><a class="button secondary" href="/v1/admin/dashboard">View admin API</a></article>
-                <article class="panel"><h2>Testing handbook</h2><p>Follow the project testing documentation to validate routing, usage accounting, and health workflows before release.</p><a class="button secondary" href="/v1/countries">Check coverage API</a></article>
+                <article class="panel"><h2>API reference</h2><p>Review authentication, country, plan, usage, key rotation, proxy credential, node, billing, and admin endpoints.</p><a class="button secondary" href="/v1/plans">Explore plans API</a></article>
+                <article class="panel"><h2>Sandbox quick start</h2><p>Use <code>http://localhost:8080</code>, seeded demo users, and public <code>key-demo-*</code> dashboard actions to test flows locally before issuing production keys.</p><a class="button secondary" href="/dashboard">Open demo panel</a></article>
+                <article class="panel"><h2>Countries and SDK examples</h2><p>Coverage includes DE, FR, NL, US, IT, and ES with copyable snippets in plain cURL, PHP, Python, JavaScript, and Java.</p><a class="button secondary" href="/v1/countries">Check coverage API</a></article>
             </section>
             HTML;
     }
