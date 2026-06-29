@@ -17,10 +17,10 @@ final class RoutingEngine
         $countryCode = strtoupper(strtok($proxyUsername, '.') ?: '');
         $eligible = array_values(array_filter(
             $nodes,
-            static fn(ExitNode $node): bool => $node->healthy && $node->countryCode === $countryCode
+            static fn (ExitNode $node): bool => $node->healthy && $node->countryCode === $countryCode
         ));
 
-        usort($eligible, static fn(ExitNode $a, ExitNode $b): int => [$a->activeConnections, -$a->weight] <=> [$b->activeConnections, -$b->weight]);
+        usort($eligible, static fn (ExitNode $a, ExitNode $b): int => [$a->activeConnections, -$a->weight] <=> [$b->activeConnections, -$b->weight]);
 
         return $eligible[0] ?? throw new RuntimeException(sprintf('No healthy exit nodes for %s', $countryCode));
     }
