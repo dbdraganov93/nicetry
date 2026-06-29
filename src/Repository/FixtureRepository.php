@@ -32,6 +32,24 @@ final class FixtureRepository
         return $this->data['nodes'];
     }
 
+    /** @return list<array<string, mixed>> */
+    public function users(): array
+    {
+        return $this->data['users'];
+    }
+
+    /** @return array<string, mixed>|null */
+    public function userByEmail(string $email): ?array
+    {
+        foreach ($this->users() as $user) {
+            if (strtolower((string) $user['email']) === strtolower($email)) {
+                return $user;
+            }
+        }
+
+        return null;
+    }
+
     /** @return array<string, mixed> */
     public function usageFor(string $userId): array
     {
