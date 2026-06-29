@@ -8,6 +8,25 @@ Symfony 7 / PHP 8.4 foundation for a VPN-backed HTTP/HTTPS geo proxy SaaS. The r
 2. Run `make up` to build and start PHP-FPM, Nginx, Postgres, Redis, Prometheus, Loki, Grafana, and a sample VPN/proxy node pair.
 3. Visit `http://localhost:8080/healthz` for health and `http://localhost:8080/metrics` for Prometheus text metrics.
 
+
+## Demo logins
+
+After starting the local stack, use these seeded accounts to exercise the real login and admin flows:
+
+| Area | Link | Email | Password | Role | Plan |
+| --- | --- | --- | --- | --- | --- |
+| Admin dashboard | `http://localhost:8080/admin` | `admin@geoproxy.test` | `AdminPass123!` | Admin + user | Enterprise |
+| User dashboard/login | `http://localhost:8080/login` | `user@geoproxy.test` | `UserPass123!` | User | Starter |
+| User dashboard/login | `http://localhost:8080/login` | `maya@geoproxy.test` | `MayaPass123!` | User | Pro |
+
+The same credentials work with the JSON login endpoint:
+
+```bash
+curl -s http://localhost:8080/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user@geoproxy.test","password":"UserPass123!"}'
+```
+
 ## Architecture decisions
 
 - **Symfony components with Doctrine attributes**: entities live in `src/Entity` and repositories in `src/Repository` so business logic can later move into services without coupling controllers to persistence.

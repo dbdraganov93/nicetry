@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GeoProxy\Controller;
 
+use GeoProxy\Repository\FixtureRepository;
 use GeoProxy\Service\ApiResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\Request;
@@ -14,6 +15,8 @@ final class AdminController
     #[Route('/v1/admin/dashboard', name: 'admin_dashboard', methods: ['GET'])]
     public function dashboard(Request $request): Response
     {
-        return ApiResponse::json(['users' => 0, 'nodes' => 0, 'usage_bytes' => 0, 'billing_mrr_cents' => 0]);
+        $fixtures = new FixtureRepository();
+
+        return ApiResponse::json(['users' => count($fixtures->users()), 'nodes' => count($fixtures->nodes()), 'usage_bytes' => 11274289152, 'billing_mrr_cents' => 12800]);
     }
 }

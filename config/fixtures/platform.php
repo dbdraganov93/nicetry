@@ -24,6 +24,12 @@ return [
         ['id' => 'nl-01', 'country_code' => 'NL', 'city' => 'Amsterdam', 'healthy' => true, 'active_connections' => 7, 'capacity' => 500, 'latency_ms' => 45, 'public_ip' => '203.0.113.30', 'vpn_uptime_seconds' => 71200],
         ['id' => 'us-01', 'country_code' => 'US', 'city' => 'New York', 'healthy' => true, 'active_connections' => 22, 'capacity' => 1000, 'latency_ms' => 92, 'public_ip' => '203.0.113.40', 'vpn_uptime_seconds' => 65000],
     ],
+
+    'users' => [
+        ['id' => 'admin-user', 'name' => 'Alex Morgan', 'email' => 'admin@geoproxy.test', 'password_hash' => '$2y$12$fEutvlIO0.7IQyim94RaUOT7CzMHaONe.B8UTH51gb6r.HxDZE35y', 'roles' => ['ROLE_ADMIN', 'ROLE_USER'], 'plan' => 'enterprise', 'status' => 'active'],
+        ['id' => 'demo-user', 'name' => 'Jamie Carter', 'email' => 'user@geoproxy.test', 'password_hash' => '$2y$12$4kFqHjmhXb88/DVh9ggoIOxCdT5UuudOyudRVcVnAvVJH0sSGKM5S', 'roles' => ['ROLE_USER'], 'plan' => 'starter', 'status' => 'active'],
+        ['id' => 'maya-user', 'name' => 'Maya Chen', 'email' => 'maya@geoproxy.test', 'password_hash' => '$2y$12$ys5Tj634kqH9Y9NyTQ1Co.mg0zqkI.zCTLSFsGHLGKqqRqh8FRcsi', 'roles' => ['ROLE_USER'], 'plan' => 'pro', 'status' => 'active'],
+    ],
     'usage' => [
         'demo-user' => ['plan' => 'starter', 'period' => '2026-06', 'requests' => 18420, 'bytes_in' => 2147483648, 'bytes_out' => 9126805504, 'connection_seconds' => 38540, 'countries' => ['DE' => 10200, 'FR' => 4300, 'NL' => 3920], 'errors' => 37, 'average_latency_ms' => 58],
     ],
