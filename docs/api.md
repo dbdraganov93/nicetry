@@ -188,15 +188,143 @@ func main() {
 }
 ```
 
-### Proxy traffic example
+### Proxy traffic examples by website and country
 
 After creating proxy credentials, configure an HTTP client to use the proxy endpoint and basic-auth username/password. The username controls geography; for example, `de.customer123` routes through Germany.
 
+The examples below request a caller-provided website through a caller-provided country. They use these shared inputs:
+
+| Input | Example value | Notes |
+| --- | --- | --- |
+| Website | `https://ifconfig.me/ip` | Any `http://` or `https://` URL your plan may access. |
+| Country | `DE` | Two-letter country code from `GET /v1/countries`. |
+| Customer ID | `customer123` | The suffix in your generated proxy username. |
+| Proxy password | `generated-proxy-password` | The password returned when creating proxy credentials. |
+| Proxy host | `proxy.local:3128` | Replace with your deployed proxy hostname and port. |
+
+#### cURL
+
 ```bash
-curl -x "http://de.customer123:generated-proxy-password@proxy.local:3128" \
-  https://ifconfig.me
+WEBSITE="https://ifconfig.me/ip"
+COUNTRY="DE"
+CUSTOMER_ID="customer123"
+PROXY_PASSWORD="generated-proxy-password"
+PROXY_HOST="proxy.local:3128"
+
+COUNTRY_LOWER=$(printf '%s' "$COUNTRY" | tr '[:upper:]' '[:lower:]')
+
+curl -s \
+  -x "http://${COUNTRY_LOWER}.${CUSTOMER_ID}:${PROXY_PASSWORD}@${PROXY_HOST}" \
+  "$WEBSITE"
 ```
 
+Example output:
+
+```text
+203.0.113.42
+```
+
+#### Python
+
+```python
+import os
+import requests
+
+website = os.getenv("GEOPROXY_WEBSITE", "https://ifconfig.me/ip")
+country = os.getenv("GEOPROXY_COUNTRY", "DE").lower()
+customer_id = os.getenv("GEOPROXY_CUSTOMER_ID", "customer123")
+proxy_password = os.environ["GEOPROXY_PROXY_PASSWORD"]
+proxy_host = os.getenv("GEOPROXY_PROXY_HOST", "proxy.local:3128")
+
+proxy_url = f"http://{country}.{customer_id}:{proxy_password}@{proxy_host}"
+
+response = requests.get(
+    website,
+    proxies={"http": proxy_url, "https": proxy_url},
+    timeout=20,
+)
+response.raise_for_status()
+
+print(response.text.strip())
+```
+
+Example output:
+
+```text
+203.0.113.42
+```
+
+#### PHP
+
+```php
+<?php
+
+$website = getenv('GEOPROXY_WEBSITE') ?: 'https://ifconfig.me/ip';
+$country = strtolower(getenv('GEOPROXY_COUNTRY') ?: 'DE');
+$customerId = getenv('GEOPROXY_CUSTOMER_ID') ?: 'customer123';
+$proxyPassword = getenv('GEOPROXY_PROXY_PASSWORD');
+$proxyHost = getenv('GEOPROXY_PROXY_HOST') ?: 'proxy.local:3128';
+
+$ch = curl_init($website);
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_PROXY => 'http://' . $proxyHost,
+    CURLOPT_PROXYUSERPWD => $country . '.' . $customerId . ':' . $proxyPassword,
+    CURLOPT_TIMEOUT => 20,
+]);
+
+$body = curl_exec($ch);
+$status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+$error = curl_error($ch);
+curl_close($ch);
+
+if ($body === false || $status < 200 || $status >= 300) {
+    throw new RuntimeException($error ?: 'GeoProxy request returned HTTP ' . $status);
+}
+
+echo trim($body) . PHP_EOL;
+```
+
+Example output:
+
+```text
+203.0.113.42
+```
+
+#### JavaScript / Node.js
+
+Install a proxy-capable fetch dispatcher first:
+
+```bash
+npm install undici
+```
+
+```javascript
+import { fetch, ProxyAgent } from 'undici';
+
+const website = process.env.GEOPROXY_WEBSITE ?? 'https://ifconfig.me/ip';
+const country = (process.env.GEOPROXY_COUNTRY ?? 'DE').toLowerCase();
+const customerId = process.env.GEOPROXY_CUSTOMER_ID ?? 'customer123';
+const proxyPassword = process.env.GEOPROXY_PROXY_PASSWORD;
+const proxyHost = process.env.GEOPROXY_PROXY_HOST ?? 'proxy.local:3128';
+
+const proxyUrl = `http://${country}.${customerId}:${proxyPassword}@${proxyHost}`;
+const dispatcher = new ProxyAgent(proxyUrl);
+
+const response = await fetch(website, { dispatcher });
+
+if (!response.ok) {
+  throw new Error(`GeoProxy request returned HTTP ${response.status}`);
+}
+
+console.log((await response.text()).trim());
+```
+
+Example output:
+
+```text
+203.0.113.42
+```
 
 ## Endpoints
 
