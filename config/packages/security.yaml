@@ -21,5 +21,7 @@ security:
     - { path: ^/webhooks/stripe, roles: PUBLIC_ACCESS }
     - { path: ^/v1/plans, roles: PUBLIC_ACCESS }
     - { path: ^/v1/billing/plans, roles: PUBLIC_ACCESS }
+    # Local demo dashboard forms use seeded key-demo-* records without exposing a real secret.
+    - { path: ^/v1/api-keys/key-demo-[A-Za-z0-9_-]+/(rotate|ip-whitelist)$, roles: PUBLIC_ACCESS }
     - { path: ^/v1/admin, roles: ROLE_ADMIN }
     - { path: ^/v1, roles: ROLE_USER }
