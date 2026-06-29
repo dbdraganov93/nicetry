@@ -35,6 +35,12 @@ final class WebController
         return new Response($this->layout('Plans — GeoProxy', 'plans', $this->plansView(new PlanCatalog()->all())));
     }
 
+    #[Route('/docs', name: 'app_docs_page', methods: ['GET'])]
+    public function docs(): Response
+    {
+        return new Response($this->layout('Documentation — GeoProxy', 'docs', $this->docsView()));
+    }
+
     #[Route('/admin', name: 'app_admin_page', methods: ['GET'])]
     public function admin(): Response
     {
@@ -113,6 +119,22 @@ final class WebController
         return '<section class="section page-head"><p class="eyebrow">Plans</p><h1>Simple pricing for every traffic profile.</h1><p class="lede small">Upgrade as request volume, bandwidth, locations, and dedicated routing needs grow.</p></section><section class="section pricing-grid">' . implode('', $cards) . '</section>';
     }
 
+    private function docsView(): string
+    {
+        return <<<'HTML'
+            <section class="section page-head">
+                <p class="eyebrow">Documentation</p>
+                <h1>Build with the GeoProxy API.</h1>
+                <p class="lede small">Find endpoint references, architecture notes, deployment guidance, testing instructions, monitoring runbooks, and recovery procedures from one dedicated documentation page.</p>
+            </section>
+            <section class="section feature-grid">
+                <article class="panel"><h2>API reference</h2><p>Review authentication, country, plan, usage, key, proxy credential, node, billing, and admin endpoints.</p><a class="button secondary" href="/v1/plans">Explore plans API</a></article>
+                <article class="panel"><h2>Operations guides</h2><p>Use deployment, monitoring, database, and disaster recovery docs to run GeoProxy reliably in production.</p><a class="button secondary" href="/v1/admin/dashboard">View admin API</a></article>
+                <article class="panel"><h2>Testing handbook</h2><p>Follow the project testing documentation to validate routing, usage accounting, and health workflows before release.</p><a class="button secondary" href="/v1/countries">Check coverage API</a></article>
+            </section>
+            HTML;
+    }
+
     /** @param list<array<string, mixed>> $countries @param list<array<string, mixed>> $nodes */
     private function adminView(array $countries, array $nodes): string
     {
@@ -129,6 +151,7 @@ final class WebController
             'login' => ['/login', 'Login'],
             'register' => ['/register', 'Register'],
             'plans' => ['/plans', 'Plans'],
+            'docs' => ['/docs', 'Documentation'],
         ];
         $links = '';
         foreach ($nav as $key => [$href, $label]) {
@@ -136,7 +159,7 @@ final class WebController
             $links .= sprintf('<a%s href="%s">%s</a>', $class, $href, $label);
         }
 
-        return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . htmlspecialchars($title, ENT_QUOTES) . '</title><style>' . $this->styles() . '</style></head><body><nav class="nav"><a class="brand" href="/">GeoProxy</a><div>' . $links . '</div></nav><main>' . $content . '</main><footer class="footer"><span>GeoProxy API</span><a href="/v1/plans">/v1/plans</a><a href="/v1/countries">/v1/countries</a><a href="/v1/admin/dashboard">/v1/admin/dashboard</a></footer></body></html>';
+        return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . htmlspecialchars($title, ENT_QUOTES) . '</title><style>' . $this->styles() . '</style></head><body><nav class="nav"><a class="brand" href="/">GeoProxy</a><div>' . $links . '</div></nav><main>' . $content . '</main><footer class="footer"><span>GeoProxy API</span><a href="/docs">Documentation</a><a href="/v1/plans">/v1/plans</a><a href="/v1/countries">/v1/countries</a><a href="/v1/admin/dashboard">/v1/admin/dashboard</a></footer></body></html>';
     }
 
     private function styles(): string
