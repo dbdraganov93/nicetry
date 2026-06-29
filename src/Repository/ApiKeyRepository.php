@@ -23,4 +23,11 @@ final class ApiKeyRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+    public function findActiveByPlainTextKey(string $plainTextKey): ?ApiKey
+    {
+        return $this->findOneBy([
+            'keyHash' => hash('sha256', $plainTextKey),
+            'revokedAt' => null,
+        ]);
+    }
 }

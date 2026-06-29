@@ -15,7 +15,7 @@ use Symfony\Component\Uid\Uuid;
 class ExitNode
 {
     #[ORM\Id]
-    #[ORM\Column(type: 'uuid', unique: true)]
+    #[ORM\Column(name: 'id', type: 'uuid', unique: true)]
     private Uuid $uuid;
 
     /** Public read aliases keep routing code simple and testable without Doctrine. */

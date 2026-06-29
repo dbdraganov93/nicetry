@@ -5,16 +5,18 @@ security:
     app_user_provider:
       entity: { class: GeoProxy\Entity\User, property: email }
   firewalls:
-    login:
-      pattern: ^/auth/login
+    dev:
+      pattern: ^/(_(profiler|wdt)|css|images|js)/
+      security: false
+    main:
       stateless: true
-      json_login: { check_path: /auth/login, username_path: email, password_path: password, success_handler: lexik_jwt_authentication.handler.authentication_success, failure_handler: lexik_jwt_authentication.handler.authentication_failure }
-    api:
-      pattern: ^/v1
-      stateless: true
-      custom_authenticators: [GeoProxy\Security\ApiKeyAuthenticator]
-      jwt: ~
+      provider: app_user_provider
+      custom_authenticators:
+        - GeoProxy\Security\ApiKeyAuthenticator
   access_control:
+    - { path: ^/healthz, roles: PUBLIC_ACCESS }
+    - { path: ^/metrics, roles: PUBLIC_ACCESS }
     - { path: ^/auth/login, roles: PUBLIC_ACCESS }
+    - { path: ^/webhooks/stripe, roles: PUBLIC_ACCESS }
     - { path: ^/v1/admin, roles: ROLE_ADMIN }
     - { path: ^/v1, roles: ROLE_USER }

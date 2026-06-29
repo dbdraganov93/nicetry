@@ -10,7 +10,8 @@ use GeoProxy\Repository\CountryRepository;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: CountryRepository::class)]
-#[ORM\Table(name: 'countrys')]
+#[ORM\Table(name: 'countries')]
+#[ORM\UniqueConstraint(name: 'uniq_country_iso', columns: ['iso_code'])]
 class Country
 {
     #[ORM\Id]

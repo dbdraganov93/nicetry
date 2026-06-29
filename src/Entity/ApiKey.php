@@ -11,6 +11,8 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: ApiKeyRepository::class)]
 #[ORM\Table(name: 'api_keys')]
+#[ORM\UniqueConstraint(name: 'uniq_api_key_hash', columns: ['key_hash'])]
+#[ORM\Index(name: 'idx_api_key_active', columns: ['user_id', 'revoked_at'])]
 class ApiKey
 {
     #[ORM\Id]

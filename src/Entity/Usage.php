@@ -11,6 +11,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: UsageRepository::class)]
 #[ORM\Table(name: 'usages')]
+#[ORM\Index(name: 'idx_usage_period', columns: ['user_id', 'period_start', 'period_end'])]
 class Usage
 {
     #[ORM\Id]

@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace GeoProxy\Controller;
 
 use GeoProxy\Service\ApiResponse;
+use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
 final class CountryController
 {
+    #[Route('/v1/countries', name: 'countries_list', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
         return ApiResponse::json([

@@ -10,7 +10,8 @@ use GeoProxy\Repository\CityRepository;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: CityRepository::class)]
-#[ORM\Table(name: 'citys')]
+#[ORM\Table(name: 'cities')]
+#[ORM\Index(name: 'idx_city_country', columns: ['country_id', 'name'])]
 class City
 {
     #[ORM\Id]

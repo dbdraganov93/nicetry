@@ -11,6 +11,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: RequestLogRepository::class)]
 #[ORM\Table(name: 'request_logs')]
+#[ORM\Index(name: 'idx_request_log_user_created', columns: ['user_id', 'created_at'])]
 class RequestLog
 {
     #[ORM\Id]
