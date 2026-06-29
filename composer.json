@@ -1,0 +1,34 @@
+{
+  "name": "geo-proxy/saas-platform",
+  "description": "VPN-backed geo proxy SaaS foundation",
+  "type": "project",
+  "require": {
+    "php": ">=8.4",
+    "ext-pdo": "*",
+    "symfony/console": "^7.0",
+    "symfony/dotenv": "^7.0",
+    "symfony/http-foundation": "^7.0",
+    "symfony/routing": "^7.0",
+    "predis/predis": "^2.2",
+    "stripe/stripe-php": "^15.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.0",
+    "friendsofphp/php-cs-fixer": "^3.64"
+  },
+  "autoload": {
+    "psr-4": {
+      "GeoProxy\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "GeoProxy\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "cs:check": "php-cs-fixer fix --dry-run --diff"
+  },
+  "license": "proprietary"
+}
