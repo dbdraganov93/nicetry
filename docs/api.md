@@ -326,6 +326,81 @@ Example output:
 203.0.113.42
 ```
 
+### Real target example: request `kaufland.de` from a Germany exit IP
+
+Use the `de.` username prefix to select a German proxy route, then send the actual website URL through the proxy. These examples intentionally use `https://www.kaufland.de/` as the target instead of an IP-check service. Replace `customer123`, `generated-proxy-password`, and `proxy.example.com:3128` with the proxy credentials and endpoint issued by your deployment.
+
+#### cURL
+
+```bash
+curl -L --compressed \
+  -x "http://de.customer123:generated-proxy-password@proxy.example.com:3128" \
+  -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36" \
+  "https://www.kaufland.de/"
+```
+
+#### Python
+
+```python
+import requests
+
+proxy_url = "http://de.customer123:generated-proxy-password@proxy.example.com:3128"
+
+response = requests.get(
+    "https://www.kaufland.de/",
+    proxies={"http": proxy_url, "https": proxy_url},
+    headers={
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/126 Safari/537.36"
+        ),
+        "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+    },
+    timeout=30,
+)
+response.raise_for_status()
+
+print(response.status_code)
+print(response.url)
+print(response.text[:500])
+```
+
+#### JavaScript / Node.js
+
+```javascript
+import { fetch, ProxyAgent } from 'undici';
+
+const proxyUrl = 'http://de.customer123:generated-proxy-password@proxy.example.com:3128';
+const dispatcher = new ProxyAgent(proxyUrl);
+
+const response = await fetch('https://www.kaufland.de/', {
+  dispatcher,
+  headers: {
+    'User-Agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+      '(KHTML, like Gecko) Chrome/126 Safari/537.36',
+    'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8',
+  },
+});
+
+if (!response.ok) {
+  throw new Error(`Kaufland request returned HTTP ${response.status}`);
+}
+
+console.log((await response.text()).slice(0, 500));
+```
+
+To verify that the same proxy credentials are using a Germany exit IP before calling Kaufland, request an IP/geolocation endpoint with the identical proxy URL:
+
+```bash
+curl -s \
+  -x "http://de.customer123:generated-proxy-password@proxy.example.com:3128" \
+  "https://ipapi.co/json/"
+```
+
+The response should identify the proxy exit as Germany, for example with `country_code` set to `DE`.
+
 ## Endpoints
 
 ### `POST /auth/register`
