@@ -19,6 +19,7 @@ security:
     - { path: ^/auth/login, roles: PUBLIC_ACCESS }
     - { path: ^/auth/register, roles: PUBLIC_ACCESS }
     - { path: ^/webhooks/stripe, roles: PUBLIC_ACCESS }
+    - { path: ^/webhooks/paypal, roles: PUBLIC_ACCESS }
     - { path: ^/v1/plans, roles: PUBLIC_ACCESS }
     - { path: ^/v1/billing/plans, roles: PUBLIC_ACCESS }
     # Local demo dashboard forms use seeded key-demo-* records without exposing a real secret.

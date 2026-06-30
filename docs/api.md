@@ -64,6 +64,18 @@ password: generated-proxy-password
 The username prefix selects routing geography. Future compatible forms include city routing such as `de-berlin.customer123`, sticky-session suffixes, and dedicated-IP aliases.
 
 
+
+## NiceTry one-line client experience
+
+The product goal is a small SDK wrapper around `POST /v1/fetch` so application code can stay as simple as:
+
+```php
+$NiceTry = new NiceTry('https://api.nicetry.example', getenv('NICETRY_API_KEY'));
+$html = $NiceTry->request('google.com', 'DE');
+```
+
+See `docs/sdk.md` and `sdk/php/NiceTry.php` for PHP, JavaScript, Python, Java, and cURL examples.
+
 ## Fetch a website through NordVPN by country
 
 Use `POST /v1/fetch` when the end user wants to provide a website URL and a country, then receive the origin response fetched from that country. The gateway container runs the NordVPN CLI (`nordvpn connect <country>`) before fetching the URL with `curl`, so no WireGuard or OpenVPN configuration is required by the API caller.
@@ -750,3 +762,76 @@ php -S 127.0.0.1:8080 -t public
 curl -s http://127.0.0.1:8080/healthz
 curl -s http://127.0.0.1:8080/v1/plans
 ```
+
+## Routing policies, exit pools, and scrape planning
+
+Scalable multi-client scraping is managed with logical policies rather than one container per customer by default.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /v1/routing/policies` | List per-client country, target, concurrency, sticky-session, priority, and dedicated-pool policies. |
+| `GET /v1/routing/exit-pools` | List shared and dedicated country exit pools with desired/healthy nodes, queue depth, and scale signal. |
+| `GET /v1/routing/target-policies` | List target-domain limits such as risk level, minimum delay, max RPS, JS requirement, and sticky-session requirement. |
+| `GET /v1/scrape/jobs` | List queued/running scrape jobs in the sandbox control plane. |
+| `POST /v1/scrape/plan` | Validate a proposed scrape request against client and target policies and return the queue partition that should receive it. |
+
+Example scrape planning request:
+
+```bash
+curl -s http://localhost:8080/v1/scrape/plan \
+  -H 'Content-Type: application/json' \
+  -d '{"client_id":"demo-user","url":"https://example.com/catalog.json","country_code":"DE","session_id":"browser-1"}'
+```
+
+Example response:
+
+```json
+{
+  "client_id": "demo-user",
+  "country_code": "DE",
+  "target_host": "example.com",
+  "sticky_sessions_enabled": true,
+  "dedicated_pool_id": null,
+  "queue": "scrape.normal.DE.normal.example-com",
+  "target_policy": {
+    "domain": "example.com",
+    "risk_level": "normal",
+    "min_delay_ms": 250,
+    "max_rps_per_client": 5,
+    "requires_js": false,
+    "requires_sticky_session": false,
+    "allowed_countries": ["DE", "FR", "NL", "US"]
+  }
+}
+```
+
+## Production client onboarding and payments
+
+A production client should be able to register, receive an API key, choose a plan, complete checkout, and make the first request without manual admin work.
+
+### Recommended payment setup
+
+- Use **Stripe Payment Element** as the default card gateway because it supports cards plus wallet methods such as Apple Pay, Google Pay, and Link through one integration.
+- Use **PayPal Checkout** as an alternate provider for PayPal wallets and PayPal-hosted card/Google Pay flows.
+- Keep provider webhooks idempotent with `payment_gateway_events` and store checkout state in `checkout_sessions`.
+
+### Register and receive first-use credentials
+
+`POST /auth/register` returns a generated `gp_live_*` API key, initial routing policy, and copy/paste first request examples.
+
+```bash
+curl -s https://api.nicetry.example/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"new-client@example.com","password":"secret","plan":"starter"}'
+```
+
+### Start checkout
+
+```bash
+curl -s https://api.nicetry.example/v1/billing/checkout \
+  -H "Authorization: Bearer $NICETRY_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"plan":"starter","provider":"stripe","method":"google_pay"}'
+```
+
+Supported provider/method combinations are returned by `GET /v1/billing/plans` under `payment_methods`. The default card recommendation is `provider=stripe&method=card`; use `provider=stripe&method=google_pay` for Google Pay through Stripe or `provider=paypal&method=paypal` for PayPal Checkout.

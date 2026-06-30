@@ -34,6 +34,25 @@ return [
         'demo-user' => ['plan' => 'starter', 'period' => '2026-06', 'requests' => 18420, 'bytes_in' => 2147483648, 'bytes_out' => 9126805504, 'connection_seconds' => 38540, 'countries' => ['DE' => 10200, 'FR' => 4300, 'NL' => 3920], 'errors' => 37, 'average_latency_ms' => 58],
         'maya-user' => ['plan' => 'pro', 'period' => '2026-06', 'requests' => 482100, 'bytes_in' => 8589934592, 'bytes_out' => 55834574848, 'connection_seconds' => 91820, 'countries' => ['US' => 211000, 'DE' => 120500, 'FR' => 80600, 'NL' => 70000], 'errors' => 91, 'average_latency_ms' => 64],
     ],
+
+    'routing_policies' => [
+        ['client_id' => 'demo-user', 'allowed_countries' => ['DE', 'FR', 'NL', 'US'], 'allowed_targets' => ['example.com', 'ifconfig.me'], 'max_concurrent_requests' => 50, 'sticky_sessions_enabled' => true, 'dedicated_pool_id' => null, 'priority' => 100],
+        ['client_id' => 'maya-user', 'allowed_countries' => ['DE', 'FR', 'NL', 'US', 'IT', 'ES'], 'allowed_targets' => ['example.com', 'shop.example.com'], 'max_concurrent_requests' => 500, 'sticky_sessions_enabled' => true, 'dedicated_pool_id' => null, 'priority' => 75],
+        ['client_id' => 'admin-user', 'allowed_countries' => ['DE', 'FR', 'NL', 'US', 'IT', 'ES'], 'allowed_targets' => [], 'max_concurrent_requests' => 2000, 'sticky_sessions_enabled' => true, 'dedicated_pool_id' => 'pool-enterprise-global', 'priority' => 25],
+    ],
+    'exit_pools' => [
+        ['id' => 'pool-shared-de', 'country_code' => 'DE', 'pool_type' => 'shared', 'client_id' => null, 'desired_nodes' => 3, 'healthy_nodes' => 2, 'queue_depth' => 18, 'active_connections' => 20, 'scale_signal' => 'steady'],
+        ['id' => 'pool-shared-fr', 'country_code' => 'FR', 'pool_type' => 'shared', 'client_id' => null, 'desired_nodes' => 2, 'healthy_nodes' => 1, 'queue_depth' => 9, 'active_connections' => 19, 'scale_signal' => 'add_node'],
+        ['id' => 'pool-enterprise-global', 'country_code' => 'US', 'pool_type' => 'dedicated', 'client_id' => 'admin-user', 'desired_nodes' => 4, 'healthy_nodes' => 4, 'queue_depth' => 2, 'active_connections' => 22, 'scale_signal' => 'reserved'],
+    ],
+    'target_policies' => [
+        ['domain' => 'example.com', 'risk_level' => 'normal', 'min_delay_ms' => 250, 'max_rps_per_client' => 5, 'requires_js' => false, 'requires_sticky_session' => false, 'allowed_countries' => ['DE', 'FR', 'NL', 'US']],
+        ['domain' => 'shop.example.com', 'risk_level' => 'retail', 'min_delay_ms' => 1000, 'max_rps_per_client' => 2, 'requires_js' => true, 'requires_sticky_session' => true, 'allowed_countries' => ['DE', 'FR', 'US']],
+    ],
+    'scrape_jobs' => [
+        ['id' => 'job-demo-1', 'client_id' => 'demo-user', 'url' => 'https://example.com/catalog.json', 'country_code' => 'DE', 'target_host' => 'example.com', 'priority' => 100, 'status' => 'queued', 'attempts' => 0],
+        ['id' => 'job-maya-1', 'client_id' => 'maya-user', 'url' => 'https://shop.example.com/products/42', 'country_code' => 'US', 'target_host' => 'shop.example.com', 'priority' => 75, 'status' => 'running', 'attempts' => 1],
+    ],
     'api_keys' => [
         'demo-user' => [
             ['id' => 'key-demo-primary', 'name' => 'Production traffic', 'prefix' => 'gp_9f3a21c8', 'created_at' => '2026-05-14T09:20:00+00:00', 'last_used_at' => '2026-06-29T08:48:00+00:00', 'auth_methods' => ['Authorization: Bearer', 'X-API-Key'], 'ip_whitelist' => ['198.51.100.24', '203.0.113.0/28']],
