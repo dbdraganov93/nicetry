@@ -64,6 +64,18 @@ password: generated-proxy-password
 The username prefix selects routing geography. Future compatible forms include city routing such as `de-berlin.customer123`, sticky-session suffixes, and dedicated-IP aliases.
 
 
+
+## NiceTry one-line client experience
+
+The product goal is a small SDK wrapper around `POST /v1/fetch` so application code can stay as simple as:
+
+```php
+$NiceTry = new NiceTry('https://api.nicetry.example', getenv('NICETRY_API_KEY'));
+$html = $NiceTry->request('google.com', 'DE');
+```
+
+See `docs/sdk.md` and `sdk/php/NiceTry.php` for PHP, JavaScript, Python, Java, and cURL examples.
+
 ## Fetch a website through NordVPN by country
 
 Use `POST /v1/fetch` when the end user wants to provide a website URL and a country, then receive the origin response fetched from that country. The gateway container runs the NordVPN CLI (`nordvpn connect <country>`) before fetching the URL with `curl`, so no WireGuard or OpenVPN configuration is required by the API caller.
