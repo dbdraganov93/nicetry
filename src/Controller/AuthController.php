@@ -6,6 +6,7 @@ namespace GeoProxy\Controller;
 
 use GeoProxy\Repository\FixtureRepository;
 use GeoProxy\Service\ApiResponse;
+use GeoProxy\Service\ClientOnboardingService;
 use GeoProxy\Service\JwtService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -14,7 +15,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class AuthController
 {
     #[Route('/auth/register', name: 'auth_register', methods: ['POST'])]
-    public function register(Request $request): Response
+    public function register(Request $request, ?ClientOnboardingService $onboarding = null): Response
     {
         $payload = $this->payload($request);
         $email = (string) ($payload['email'] ?? '');
@@ -24,7 +25,7 @@ final class AuthController
             return ApiResponse::json(['error' => 'invalid_email'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        return ApiResponse::json(['status' => 'registered', 'email' => $email, 'plan' => $plan], Response::HTTP_CREATED);
+        return ApiResponse::json(($onboarding ?? new ClientOnboardingService())->register($email, $plan, (string) ($payload['password'] ?? '')), Response::HTTP_CREATED);
     }
 
     #[Route('/auth/login', name: 'auth_login', methods: ['POST'])]

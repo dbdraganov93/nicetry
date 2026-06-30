@@ -804,3 +804,34 @@ Example response:
   }
 }
 ```
+
+## Production client onboarding and payments
+
+A production client should be able to register, receive an API key, choose a plan, complete checkout, and make the first request without manual admin work.
+
+### Recommended payment setup
+
+- Use **Stripe Payment Element** as the default card gateway because it supports cards plus wallet methods such as Apple Pay, Google Pay, and Link through one integration.
+- Use **PayPal Checkout** as an alternate provider for PayPal wallets and PayPal-hosted card/Google Pay flows.
+- Keep provider webhooks idempotent with `payment_gateway_events` and store checkout state in `checkout_sessions`.
+
+### Register and receive first-use credentials
+
+`POST /auth/register` returns a generated `gp_live_*` API key, initial routing policy, and copy/paste first request examples.
+
+```bash
+curl -s https://api.nicetry.example/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"new-client@example.com","password":"secret","plan":"starter"}'
+```
+
+### Start checkout
+
+```bash
+curl -s https://api.nicetry.example/v1/billing/checkout \
+  -H "Authorization: Bearer $NICETRY_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"plan":"starter","provider":"stripe","method":"google_pay"}'
+```
+
+Supported provider/method combinations are returned by `GET /v1/billing/plans` under `payment_methods`. The default card recommendation is `provider=stripe&method=card`; use `provider=stripe&method=google_pay` for Google Pay through Stripe or `provider=paypal&method=paypal` for PayPal Checkout.

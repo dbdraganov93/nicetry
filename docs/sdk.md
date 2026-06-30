@@ -143,3 +143,12 @@ public final class NiceTry {
     }
 }
 ```
+
+## Production onboarding flow
+
+1. Register with `POST /auth/register`.
+2. Store the returned `api_key.secret` once; it is the value for `NICETRY_API_KEY`.
+3. Start checkout with `POST /v1/billing/checkout` using `provider=stripe&method=card` for cards, `provider=stripe&method=google_pay` for Google Pay through Stripe, or `provider=paypal&method=paypal` for PayPal.
+4. After checkout succeeds, call `$NiceTry->request('google.com', 'DE')`.
+
+Stripe is the recommended default for cards and wallets; PayPal is implemented as a second provider for customers that prefer PayPal-branded checkout.
