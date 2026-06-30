@@ -7,6 +7,8 @@ namespace GeoProxy\Controller;
 use GeoProxy\Repository\FixtureRepository;
 use GeoProxy\Service\PlanCatalog;
 use GeoProxy\Service\UsageMonitor;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -53,11 +55,76 @@ final class WebController
     }
 
     #[Route('/admin', name: 'app_admin_page', methods: ['GET'])]
-    public function admin(): Response
+    public function admin(Request $request): Response
     {
+        if (!$this->hasAdminSession($request)) {
+            return new Response($this->layout('Admin sign in — GeoProxy', 'admin', $this->adminLoginView()));
+        }
+
         $fixtures = new FixtureRepository();
 
-        return new Response($this->layout('Admin — GeoProxy', 'admin', $this->adminView($fixtures->countries(), $fixtures->nodes())));
+        return new Response($this->layout('Admin — GeoProxy', 'admin', $this->adminView($fixtures->countries(), $fixtures->nodes(), $fixtures->users())));
+    }
+
+    #[Route('/admin/login', name: 'app_admin_login', methods: ['POST'])]
+    public function adminLogin(Request $request): Response
+    {
+        $fixtures = new FixtureRepository();
+        $email = (string) $request->request->get('email', '');
+        $password = (string) $request->request->get('password', '');
+        $user = $fixtures->userByEmail($email);
+
+        if ($user === null || !in_array('ROLE_ADMIN', $user['roles'] ?? [], true) || !password_verify($password, (string) ($user['password_hash'] ?? ''))) {
+            return new Response($this->layout('Admin sign in — GeoProxy', 'admin', $this->adminLoginView('Invalid admin credentials.')), Response::HTTP_UNAUTHORIZED);
+        }
+
+        $response = new RedirectResponse('/admin');
+        $response->headers->setCookie(
+            new \Symfony\Component\HttpFoundation\Cookie('admin_session', hash_hmac('sha256', $email, $this->adminSessionSecret()), 0, '/', null, false, true, false, 'Lax')
+        );
+
+        return $response;
+    }
+
+    #[Route('/admin/logout', name: 'app_admin_logout', methods: ['POST'])]
+    public function adminLogout(): Response
+    {
+        $response = new RedirectResponse('/admin');
+        $response->headers->clearCookie('admin_session');
+
+        return $response;
+    }
+
+
+    private function adminLoginView(string $error = ''): string
+    {
+        $errorHtml = $error === '' ? '' : '<p class="notice error">' . htmlspecialchars($error, ENT_QUOTES) . '</p>';
+
+        return <<<HTML
+            <section class="auth-shell">
+                <form class="auth-card" method="post" action="/admin/login">
+                    <p class="eyebrow">Restricted admin area</p>
+                    <h1>Admin sign in required.</h1>
+                    <p class="lede small">Enter an administrator email and password before managing users or VPN settings.</p>
+                    {$errorHtml}
+                    <label>Email<input name="email" type="email" autocomplete="username" required></label>
+                    <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+                    <button class="button primary full" type="submit">Sign in to admin</button>
+                </form>
+            </section>
+            HTML;
+    }
+
+    private function hasAdminSession(Request $request): bool
+    {
+        $expected = hash_hmac('sha256', 'admin@geoproxy.test', $this->adminSessionSecret());
+
+        return hash_equals($expected, (string) $request->cookies->get('admin_session', ''));
+    }
+
+    private function adminSessionSecret(): string
+    {
+        return (string) ($_ENV['APP_SECRET'] ?? $_SERVER['APP_SECRET'] ?? 'dev-secret');
     }
 
     private function homeView(): string
@@ -174,13 +241,14 @@ final class WebController
             HTML;
     }
 
-    /** @param list<array<string, mixed>> $countries @param list<array<string, mixed>> $nodes */
-    private function adminView(array $countries, array $nodes): string
+    /** @param list<array<string, mixed>> $countries @param list<array<string, mixed>> $nodes @param list<array<string, mixed>> $users */
+    private function adminView(array $countries, array $nodes, array $users): string
     {
         $countryRows = array_map(static fn(array $country): string => sprintf('<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>', htmlspecialchars((string) $country['country'], ENT_QUOTES), htmlspecialchars((string) $country['code'], ENT_QUOTES), htmlspecialchars(implode(', ', $country['cities']), ENT_QUOTES), htmlspecialchars(implode(', ', $country['current_ips']), ENT_QUOTES)), $countries);
-        $nodeRows = array_map(static fn(array $node): string => sprintf('<tr><td>%s</td><td>%s</td><td>%s</td><td>%d/%d</td><td>%d ms</td></tr>', htmlspecialchars((string) $node['id'], ENT_QUOTES), htmlspecialchars((string) $node['country_code'], ENT_QUOTES), $node['healthy'] ? '<span class="status ok">Healthy</span>' : '<span class="status warn">Offline</span>', (int) $node['active_connections'], (int) $node['capacity'], (int) $node['latency_ms']), $nodes);
+        $nodeRows = array_map(static fn(array $node): string => sprintf('<tr><td>%s</td><td>%s</td><td>%s</td><td>%d/%d</td><td>%d ms</td><td><input name="token_%s" value="wg-%s-token"></td></tr>', htmlspecialchars((string) $node['id'], ENT_QUOTES), htmlspecialchars((string) $node['country_code'], ENT_QUOTES), $node['healthy'] ? '<span class="status ok">Healthy</span>' : '<span class="status warn">Offline</span>', (int) $node['active_connections'], (int) $node['capacity'], (int) $node['latency_ms'], htmlspecialchars((string) $node['id'], ENT_QUOTES), htmlspecialchars((string) $node['id'], ENT_QUOTES)), $nodes);
+        $userRows = array_map(static fn(array $user): string => sprintf('<tr><td>%s<br><span class="muted">%s</span></td><td>%s</td><td>%s</td><td><select name="status_%s"><option%s>active</option><option%s>suspended</option></select></td></tr>', htmlspecialchars((string) $user['name'], ENT_QUOTES), htmlspecialchars((string) $user['email'], ENT_QUOTES), htmlspecialchars((string) $user['plan'], ENT_QUOTES), htmlspecialchars(implode(', ', $user['roles']), ENT_QUOTES), htmlspecialchars((string) $user['id'], ENT_QUOTES), ($user['status'] ?? '') === 'active' ? ' selected' : '', ($user['status'] ?? '') === 'suspended' ? ' selected' : ''), $users);
 
-        return '<section class="section page-head"><p class="eyebrow">Admin</p><h1>Operations dashboard</h1><p class="lede small">Monitor availability, coverage, and platform usage from a dedicated admin view.</p></section><section class="section stats"><article class="panel"><span>Users</span><strong>1,248</strong><p>Active customers</p></article><article class="panel"><span>Nodes</span><strong>' . count($nodes) . '</strong><p>Registered exit nodes</p></article><article class="panel"><span>Usage</span><strong>10.6 GB</strong><p>Demo period transfer</p></article></section><section class="section table-panel"><h2>Coverage</h2><table><thead><tr><th>Country</th><th>Code</th><th>Cities</th><th>Current IPs</th></tr></thead><tbody>' . implode('', $countryRows) . '</tbody></table></section><section class="section table-panel"><h2>Node health</h2><table><thead><tr><th>Node</th><th>Country</th><th>Status</th><th>Load</th><th>Latency</th></tr></thead><tbody>' . implode('', $nodeRows) . '</tbody></table></section>';
+        return '<section class="section page-head"><p class="eyebrow">Admin</p><h1>Operations dashboard</h1><p class="lede small">Monitor availability, coverage, and platform usage from a dedicated admin view.</p></section><section class="section stats"><article class="panel"><span>Users</span><strong>1,248</strong><p>Active customers</p></article><article class="panel"><span>Nodes</span><strong>' . count($nodes) . '</strong><p>Registered exit nodes</p></article><article class="panel"><span>Usage</span><strong>10.6 GB</strong><p>Demo period transfer</p></article></section><section class="section table-panel"><h2>Coverage</h2><table><thead><tr><th>Country</th><th>Code</th><th>Cities</th><th>Current IPs</th></tr></thead><tbody>' . implode('', $countryRows) . '</tbody></table></section><section class="section table-panel"><h2>Node health</h2><table><thead><tr><th>Node</th><th>Country</th><th>Status</th><th>Load</th><th>Latency</th><th>VPN token</th></tr></thead><tbody>' . implode('', $nodeRows) . '</tbody></table></section><section class="section table-panel"><h2>User control</h2><p class="muted">Review users, plans, roles, and account state before applying changes through the admin API.</p><table><thead><tr><th>User</th><th>Plan</th><th>Roles</th><th>Status</th></tr></thead><tbody>' . implode('', $userRows) . '</tbody></table></section><section class="section table-panel"><h2>VPN configuration</h2><p class="muted">Manage per-node VPN tokens, auth mode, rotation cadence, and tunnel settings.</p><form method="post" action="/v1/admin/vpn/settings"><label>Auth mode<select name="auth_mode"><option>wireguard</option><option>openvpn</option></select></label><label>Token rotation<select name="token_rotation"><option>30 days</option><option>7 days</option><option>manual</option></select></label><label>Allowed CIDRs<input name="allowed_cidrs" value="10.8.0.0/24, fd42:42:42::/64"></label><button class="button primary" type="submit">Save VPN settings</button></form></section>';
     }
 
     private function layout(string $title, string $active, string $content): string
@@ -192,6 +260,7 @@ final class WebController
             'plans' => ['/plans', 'Plans'],
             'dashboard' => ['/dashboard', 'User panel'],
             'docs' => ['/docs', 'Documentation'],
+            'admin' => ['/admin', 'Admin'],
         ];
         $links = '';
         foreach ($nav as $key => [$href, $label]) {
@@ -204,6 +273,6 @@ final class WebController
 
     private function styles(): string
     {
-        return 'body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;background:#f5f5f7;color:#1d1d1f}a{color:#06c;text-decoration:none}.nav{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:16px 7vw;background:rgba(255,255,255,.78);backdrop-filter:saturate(180%) blur(22px);border-bottom:1px solid #e8e8ed}.brand{font-weight:800;color:#111}.nav div{display:flex;gap:8px;flex-wrap:wrap}.nav a:not(.brand){color:#515154;padding:8px 12px;border-radius:999px}.nav a.active,.nav a:not(.brand):hover{background:#fff;color:#111;box-shadow:0 1px 8px #00000012}.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);gap:36px;align-items:center;min-height:620px;padding:56px 7vw;background:radial-gradient(circle at 20% 10%,#fff 0,#f5f5f7 34%,#eaf3ff 100%)}.hero h1,.page-head h1,.auth-card h1{font-size:clamp(42px,7vw,86px);line-height:.96;letter-spacing:-.06em;margin:0}.lede{font-size:21px;line-height:1.45;color:#6e6e73;max-width:760px}.lede.small{font-size:18px}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:12px;font-weight:800;color:#86868b}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}.button{display:inline-flex;justify-content:center;align-items:center;border:0;border-radius:999px;padding:13px 22px;font-weight:700;cursor:pointer}.button.primary{background:#0071e3;color:#fff}.button.secondary{background:#fff;color:#06c;box-shadow:inset 0 0 0 1px #d2d2d7}.button.full{width:100%;box-sizing:border-box}.device-card,.panel,.auth-card,.price-card,.table-panel{background:rgba(255,255,255,.86);border:1px solid #fff;border-radius:32px;box-shadow:0 24px 80px #1d1d1f1a;padding:28px}.traffic-light{display:flex;gap:8px}.traffic-light span{width:12px;height:12px;border-radius:50%;background:#ff5f57}.traffic-light span:nth-child(2){background:#ffbd2e}.traffic-light span:nth-child(3){background:#28c840}.metric-row{display:flex;justify-content:space-between;gap:20px;border-bottom:1px solid #ececf1;padding:22px 0;color:#6e6e73}.metric-row strong{font-size:28px;color:#1d1d1f}.chart{height:150px;display:flex;gap:14px;align-items:end;padding-top:24px}.chart i{flex:1;border-radius:16px 16px 6px 6px;background:linear-gradient(#007aff,#5ac8fa)}.section{padding:34px 7vw}.feature-grid,.pricing-grid,.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}.panel h2,.price-card h2{margin-top:0}.panel p,.price-card p,.muted{color:#6e6e73}.auth-shell{min-height:calc(100vh - 150px);display:grid;place-items:center;padding:48px 7vw}.auth-card{width:min(100%,460px)}label{display:block;margin-top:18px;font-weight:700}input,select{width:100%;box-sizing:border-box;margin-top:8px;border:1px solid #d2d2d7;border-radius:16px;background:#fbfbfd;color:#1d1d1f;padding:15px;font:inherit}button{font:inherit;margin-top:22px}.price-card strong,.stats strong{display:block;font-size:42px;letter-spacing:-.04em;margin:10px 0}.price-card ul{padding-left:20px;color:#424245;line-height:1.8}.page-head{padding-top:58px}.table-panel{margin:18px 7vw;overflow:auto}table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:16px;border-bottom:1px solid #ececf1}th{color:#86868b;font-size:12px;text-transform:uppercase;letter-spacing:.08em}.status{font-weight:800}.ok{color:#248a3d}.warn{color:#bf5b00}.footer{display:flex;gap:14px;flex-wrap:wrap;padding:28px 7vw;color:#86868b}@media(max-width:780px){.hero{grid-template-columns:1fr;min-height:auto}.nav{align-items:flex-start;gap:12px;flex-direction:column}.hero h1,.page-head h1,.auth-card h1{font-size:44px}}';
+        return 'body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;background:#f5f5f7;color:#1d1d1f}a{color:#06c;text-decoration:none}.nav{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:16px 7vw;background:rgba(255,255,255,.78);backdrop-filter:saturate(180%) blur(22px);border-bottom:1px solid #e8e8ed}.brand{font-weight:800;color:#111}.nav div{display:flex;gap:8px;flex-wrap:wrap}.nav a:not(.brand){color:#515154;padding:8px 12px;border-radius:999px}.nav a.active,.nav a:not(.brand):hover{background:#fff;color:#111;box-shadow:0 1px 8px #00000012}.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);gap:36px;align-items:center;min-height:620px;padding:56px 7vw;background:radial-gradient(circle at 20% 10%,#fff 0,#f5f5f7 34%,#eaf3ff 100%)}.hero h1,.page-head h1,.auth-card h1{font-size:clamp(42px,7vw,86px);line-height:.96;letter-spacing:-.06em;margin:0}.lede{font-size:21px;line-height:1.45;color:#6e6e73;max-width:760px}.lede.small{font-size:18px}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:12px;font-weight:800;color:#86868b}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}.button{display:inline-flex;justify-content:center;align-items:center;border:0;border-radius:999px;padding:13px 22px;font-weight:700;cursor:pointer}.button.primary{background:#0071e3;color:#fff}.button.secondary{background:#fff;color:#06c;box-shadow:inset 0 0 0 1px #d2d2d7}.button.full{width:100%;box-sizing:border-box}.device-card,.panel,.auth-card,.price-card,.table-panel{background:rgba(255,255,255,.86);border:1px solid #fff;border-radius:32px;box-shadow:0 24px 80px #1d1d1f1a;padding:28px}.traffic-light{display:flex;gap:8px}.traffic-light span{width:12px;height:12px;border-radius:50%;background:#ff5f57}.traffic-light span:nth-child(2){background:#ffbd2e}.traffic-light span:nth-child(3){background:#28c840}.metric-row{display:flex;justify-content:space-between;gap:20px;border-bottom:1px solid #ececf1;padding:22px 0;color:#6e6e73}.metric-row strong{font-size:28px;color:#1d1d1f}.chart{height:150px;display:flex;gap:14px;align-items:end;padding-top:24px}.chart i{flex:1;border-radius:16px 16px 6px 6px;background:linear-gradient(#007aff,#5ac8fa)}.section{padding:34px 7vw}.feature-grid,.pricing-grid,.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}.panel h2,.price-card h2{margin-top:0}.panel p,.price-card p,.muted{color:#6e6e73}.auth-shell{min-height:calc(100vh - 150px);display:grid;place-items:center;padding:48px 7vw}.auth-card{width:min(100%,460px)}label{display:block;margin-top:18px;font-weight:700}input,select{width:100%;box-sizing:border-box;margin-top:8px;border:1px solid #d2d2d7;border-radius:16px;background:#fbfbfd;color:#1d1d1f;padding:15px;font:inherit}button{font:inherit;margin-top:22px}.price-card strong,.stats strong{display:block;font-size:42px;letter-spacing:-.04em;margin:10px 0}.price-card ul{padding-left:20px;color:#424245;line-height:1.8}.page-head{padding-top:58px}.table-panel{margin:18px 7vw;overflow:auto}table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:16px;border-bottom:1px solid #ececf1}th{color:#86868b;font-size:12px;text-transform:uppercase;letter-spacing:.08em}.notice.error{color:#b00020;background:#fff0f0;border-radius:16px;padding:12px}.status{font-weight:800}.ok{color:#248a3d}.warn{color:#bf5b00}.footer{display:flex;gap:14px;flex-wrap:wrap;padding:28px 7vw;color:#86868b}@media(max-width:780px){.hero{grid-template-columns:1fr;min-height:auto}.nav{align-items:flex-start;gap:12px;flex-direction:column}.hero h1,.page-head h1,.auth-card h1{font-size:44px}}';
     }
 }
