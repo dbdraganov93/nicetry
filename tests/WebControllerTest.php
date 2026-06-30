@@ -32,6 +32,10 @@ final class WebControllerTest extends TestCase
         self::assertStringContainsString('NordVPN CLI configuration', $html);
         self::assertStringContainsString('NordVPN location', $html);
         self::assertStringContainsString('admin@geoproxy.test', $html);
+        self::assertStringContainsString('Client routing policies', $html);
+        self::assertStringContainsString('Country exit pools', $html);
+        self::assertStringContainsString('Target policies', $html);
+        self::assertStringContainsString('Scrape job queues', $html);
     }
 
     public function testDashboardShowsUsageRotationAuthAndWhitelist(): void

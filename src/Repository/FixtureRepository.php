@@ -39,6 +39,43 @@ final class FixtureRepository
     }
 
 
+
+    /** @return list<array<string, mixed>> */
+    public function routingPolicies(): array
+    {
+        return $this->data['routing_policies'] ?? [];
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function exitPools(): array
+    {
+        return $this->data['exit_pools'] ?? [];
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function targetPolicies(): array
+    {
+        return $this->data['target_policies'] ?? [];
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function scrapeJobs(): array
+    {
+        return $this->data['scrape_jobs'] ?? [];
+    }
+
+    /** @return array<string, mixed>|null */
+    public function routingPolicyFor(string $clientId): ?array
+    {
+        foreach ($this->routingPolicies() as $policy) {
+            if ((string) $policy['client_id'] === $clientId) {
+                return $policy;
+            }
+        }
+
+        return null;
+    }
+
     /** @return list<array<string, mixed>> */
     public function apiKeysFor(string $userId): array
     {

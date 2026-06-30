@@ -750,3 +750,45 @@ php -S 127.0.0.1:8080 -t public
 curl -s http://127.0.0.1:8080/healthz
 curl -s http://127.0.0.1:8080/v1/plans
 ```
+
+## Routing policies, exit pools, and scrape planning
+
+Scalable multi-client scraping is managed with logical policies rather than one container per customer by default.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /v1/routing/policies` | List per-client country, target, concurrency, sticky-session, priority, and dedicated-pool policies. |
+| `GET /v1/routing/exit-pools` | List shared and dedicated country exit pools with desired/healthy nodes, queue depth, and scale signal. |
+| `GET /v1/routing/target-policies` | List target-domain limits such as risk level, minimum delay, max RPS, JS requirement, and sticky-session requirement. |
+| `GET /v1/scrape/jobs` | List queued/running scrape jobs in the sandbox control plane. |
+| `POST /v1/scrape/plan` | Validate a proposed scrape request against client and target policies and return the queue partition that should receive it. |
+
+Example scrape planning request:
+
+```bash
+curl -s http://localhost:8080/v1/scrape/plan \
+  -H 'Content-Type: application/json' \
+  -d '{"client_id":"demo-user","url":"https://example.com/catalog.json","country_code":"DE","session_id":"browser-1"}'
+```
+
+Example response:
+
+```json
+{
+  "client_id": "demo-user",
+  "country_code": "DE",
+  "target_host": "example.com",
+  "sticky_sessions_enabled": true,
+  "dedicated_pool_id": null,
+  "queue": "scrape.normal.DE.normal.example-com",
+  "target_policy": {
+    "domain": "example.com",
+    "risk_level": "normal",
+    "min_delay_ms": 250,
+    "max_rps_per_client": 5,
+    "requires_js": false,
+    "requires_sticky_session": false,
+    "allowed_countries": ["DE", "FR", "NL", "US"]
+  }
+}
+```
