@@ -29,8 +29,8 @@ final class WebControllerTest extends TestCase
         self::assertIsString($html);
         self::assertStringContainsString('Operations dashboard', $html);
         self::assertStringContainsString('User control', $html);
-        self::assertStringContainsString('VPN configuration', $html);
-        self::assertStringContainsString('VPN token', $html);
+        self::assertStringContainsString('NordVPN CLI configuration', $html);
+        self::assertStringContainsString('NordVPN location', $html);
         self::assertStringContainsString('admin@geoproxy.test', $html);
     }
 
