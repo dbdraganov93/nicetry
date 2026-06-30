@@ -43,12 +43,12 @@ final class AdminController
         return ApiResponse::json([
             'status' => $request->isMethod('POST') ? 'saved' : 'current',
             'settings' => [
-                'auth_mode' => (string) ($payload['auth_mode'] ?? 'wireguard'),
+                'auth_mode' => (string) ($payload['auth_mode'] ?? 'nordvpn-cli'),
                 'token_rotation' => (string) ($payload['token_rotation'] ?? '30 days'),
                 'allowed_cidrs' => (string) ($payload['allowed_cidrs'] ?? '10.8.0.0/24, fd42:42:42::/64'),
                 'tokens' => array_map(static fn(array $node): array => [
                     'node_id' => $node['id'],
-                    'token_name' => 'wg-' . $node['id'] . '-token',
+                    'token_name' => 'nordvpn-' . $node['id'] . '-login',
                     'status' => $node['healthy'] ? 'active' : 'disabled',
                 ], new FixtureRepository()->nodes()),
             ],

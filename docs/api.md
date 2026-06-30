@@ -63,6 +63,34 @@ password: generated-proxy-password
 
 The username prefix selects routing geography. Future compatible forms include city routing such as `de-berlin.customer123`, sticky-session suffixes, and dedicated-IP aliases.
 
+
+## Fetch a website through NordVPN by country
+
+Use `POST /v1/fetch` when the end user wants to provide a website URL and a country, then receive the origin response fetched from that country. The gateway container runs the NordVPN CLI (`nordvpn connect <country>`) before fetching the URL with `curl`, so no WireGuard or OpenVPN configuration is required by the API caller.
+
+Request:
+
+```bash
+curl -s http://localhost:8080/v1/fetch \
+  -H "Authorization: Bearer $GEOPROXY_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://example.com/data.json","country":"Germany"}'
+```
+
+By default the endpoint returns the raw origin body and includes metadata headers: `X-GeoProxy-Origin-Status`, `X-GeoProxy-Country`, and `X-GeoProxy-Url`. Set `"response":"envelope"` to receive JSON instead:
+
+```json
+{
+  "country": "Germany",
+  "url": "https://example.com/data.json",
+  "status": 200,
+  "content_type": "application/json",
+  "body": "{\"ok\":true}"
+}
+```
+
+The `country` value is passed to the NordVPN CLI, so callers may use names such as `Germany`, `United_States`, or other locations supported by the installed NordVPN account.
+
 ## Error format
 
 Validation and authentication errors use compact machine-readable codes:
